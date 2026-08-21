@@ -56,7 +56,7 @@ export default function InmobiliariaDemoPage() {
 
 function InmobiliariaDemoContent() {
   const searchParams = useSearchParams();
-  const nombre = searchParams.get('nombre') || 'Grupo Horizonte Propiedades';
+  const nombre = searchParams.get('nombre') || 'Felipe Propiedades';
   const ciudad = searchParams.get('ciudad') || 'Rosario';
   const telefonoRaw = searchParams.get('telefono') || '5493410000000';
   const [menuOpen, setMenuOpen] = useState(false);
