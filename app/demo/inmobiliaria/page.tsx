@@ -78,6 +78,7 @@ function InmobiliariaDemoContent() {
     description: '',
   });
   const [imageError, setImageError] = useState('');
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   const readFileAsDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -114,6 +115,16 @@ function InmobiliariaDemoContent() {
       const newIndex = index + direction;
       if (newIndex < 0 || newIndex >= imgs.length) return prev;
       [imgs[index], imgs[newIndex]] = [imgs[newIndex], imgs[index]];
+      return { ...prev, images: imgs };
+    });
+  };
+
+  const reorderImages = (from: number, to: number) => {
+    setFormData((prev) => {
+      const imgs = [...(prev.images || [])];
+      if (from === to || from < 0 || to < 0 || from >= imgs.length || to >= imgs.length) return prev;
+      const [moved] = imgs.splice(from, 1);
+      imgs.splice(to, 0, moved);
       return { ...prev, images: imgs };
     });
   };
@@ -402,8 +413,22 @@ function InmobiliariaDemoContent() {
               {(formData.images || []).length > 0 ? (
                 <div className="mb-3 flex flex-wrap gap-3">
                   {(formData.images || []).map((img, idx) => (
-                    <div key={idx} className="relative h-20 w-28 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200">
-                      <img src={img} alt={`Foto ${idx + 1}`} className="h-full w-full object-cover" />
+                    <div
+                      key={idx}
+                      draggable
+                      onDragStart={() => setDragIndex(idx)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragIndex !== null) reorderImages(dragIndex, idx);
+                        setDragIndex(null);
+                      }}
+                      onDragEnd={() => setDragIndex(null)}
+                      className={`relative h-20 w-28 flex-shrink-0 cursor-move overflow-hidden rounded-lg border transition-opacity ${
+                        dragIndex === idx ? 'border-emerald-500 opacity-40' : 'border-slate-200'
+                      }`}
+                    >
+                      <img src={img} alt={`Foto ${idx + 1}`} className="h-full w-full object-cover" draggable={false} />
                       {idx === 0 && (
                         <span className="absolute left-1 top-1 rounded bg-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                           Principal
@@ -453,7 +478,7 @@ function InmobiliariaDemoContent() {
               </label>
               {imageError && <p className="mt-1 text-xs text-red-600">{imageError}</p>}
               <p className="mt-1 text-xs text-slate-400">
-                JPG o PNG, máximo 2MB c/u. Podés subir varias a la vez; la primera es la foto principal. Usá las flechas para reordenar.
+                JPG o PNG, máximo 2MB c/u. Podés subir varias a la vez; la primera es la foto principal. Arrastrá las fotos o usá las flechas para reordenarlas.
               </p>
             </div>
 
