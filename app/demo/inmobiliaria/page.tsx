@@ -22,6 +22,8 @@ import {
   Edit2,
   Trash2,
   Lock,
+  Upload,
+  ImageOff,
 } from 'lucide-react';
 
 interface Property {
@@ -35,6 +37,7 @@ interface Property {
   imgTag: string;
   lock: number;
   tag: 'Venta' | 'Alquiler';
+  customImage?: string;
 }
 
 const INITIAL_PROPERTIES: Property[] = [
@@ -91,7 +94,28 @@ function InmobiliariaDemoContent() {
     m2: 50,
     imgTag: 'property',
     tag: 'Venta',
+    customImage: undefined,
   });
+  const [imageError, setImageError] = useState('');
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setImageError('El archivo debe ser una imagen');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setImageError('La imagen no puede pesar más de 2MB');
+      return;
+    }
+    setImageError('');
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFormData((prev) => ({ ...prev, customImage: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem('inmobiliaria_props');
@@ -163,6 +187,7 @@ function InmobiliariaDemoContent() {
       m2: 50,
       imgTag: 'property',
       tag: 'Venta',
+      customImage: undefined,
     });
   };
 
@@ -350,19 +375,6 @@ function InmobiliariaDemoContent() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">Foto de la propiedad</label>
-                <input
-                  type="text"
-                  placeholder="Ej: apartment,interior"
-                  value={formData.imgTag || ''}
-                  onChange={(e) => setFormData({ ...formData, imgTag: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-                <p className="mt-1 text-xs text-slate-400">
-                  Palabras clave en inglés separadas por coma para buscar una foto de ejemplo (ej: house,pool)
-                </p>
-              </div>
-              <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600">Tipo de operación</label>
                 <select
                   value={formData.tag || 'Venta'}
@@ -373,16 +385,68 @@ function InmobiliariaDemoContent() {
                   <option>Alquiler</option>
                 </select>
               </div>
-              <div className="flex items-end">
-                <button
-                  type="submit"
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800"
-                >
-                  <Plus className="h-4 w-4" />
-                  {editingId ? 'Guardar cambios' : 'Agregar propiedad'}
-                </button>
-              </div>
             </div>
+
+            {/* Foto de la propiedad */}
+            <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+              <label className="mb-1 block text-xs font-medium text-slate-600">Foto de la propiedad</label>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                {formData.customImage ? (
+                  <img
+                    src={formData.customImage}
+                    alt="Vista previa"
+                    className="h-20 w-28 flex-shrink-0 rounded-lg border border-slate-200 object-cover"
+                  />
+                ) : (
+                  <div className="flex h-20 w-28 flex-shrink-0 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50">
+                    <ImageOff className="h-6 w-6 text-slate-300" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    <Upload className="h-4 w-4" />
+                    Subir foto desde tu dispositivo
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                  </label>
+                  {formData.customImage && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, customImage: undefined })}
+                      className="ml-2 text-sm font-semibold text-red-600 hover:text-red-700"
+                    >
+                      Quitar foto
+                    </button>
+                  )}
+                  {imageError && <p className="mt-1 text-xs text-red-600">{imageError}</p>}
+                  <p className="mt-1 text-xs text-slate-400">JPG o PNG, máximo 2MB.</p>
+                </div>
+              </div>
+              {!formData.customImage && (
+                <div className="mt-3">
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    O usá una foto de stock de ejemplo (opcional, se usa solo si no subís una foto)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: apartment,interior"
+                    value={formData.imgTag || ''}
+                    onChange={(e) => setFormData({ ...formData, imgTag: e.target.value })}
+                    className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-slate-400">
+                    Palabras clave en inglés separadas por coma (ej: house,pool)
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800 sm:w-auto"
+            >
+              <Plus className="h-4 w-4" />
+              {editingId ? 'Guardar cambios' : 'Agregar propiedad'}
+            </button>
             {editingId && (
               <button
                 type="button"
@@ -397,6 +461,7 @@ function InmobiliariaDemoContent() {
                     m2: 50,
                     imgTag: 'property',
                     tag: 'Venta',
+                    customImage: undefined,
                   });
                 }}
                 className="mt-3 text-sm font-semibold text-slate-600 hover:text-slate-800"
@@ -537,7 +602,7 @@ function InmobiliariaDemoContent() {
             <div key={p.id} className="group overflow-hidden rounded-xl border border-slate-100 shadow-sm transition-shadow hover:shadow-lg">
               <div className="relative h-48 overflow-hidden">
                 <img
-                  src={`https://loremflickr.com/600/400/${p.imgTag}?lock=${p.lock}`}
+                  src={p.customImage || `https://loremflickr.com/600/400/${p.imgTag}?lock=${p.lock}`}
                   alt={p.title}
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
