@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Home,
@@ -17,14 +17,27 @@ import {
   Menu,
   X,
   MessageCircle,
+  LogOut,
+  Plus,
+  Edit2,
+  Trash2,
+  Lock,
 } from 'lucide-react';
 
-// Demo generico de inmobiliaria — pensado para personalizar por query params y mandar
-// como "vista previa" a un prospect puntual sin tener que redeployar nada.
-// Uso: /demo/inmobiliaria?nombre=Grupo%20Sol&ciudad=Rosario&telefono=5493410000000
-// Fotos reales via loremflickr (busca por tag y "lock" fija siempre la misma foto
-// para ese numero, asi no cambia en cada reload). Sin necesidad de API key.
-const PROPERTIES = [
+interface Property {
+  id: number;
+  title: string;
+  price: string;
+  zone: string;
+  beds: number;
+  baths: number;
+  m2: number;
+  imgTag: string;
+  lock: number;
+  tag: 'Venta' | 'Alquiler';
+}
+
+const INITIAL_PROPERTIES: Property[] = [
   { id: 1, title: 'Departamento 2 amb. a estrenar', price: 'USD 89.000', zone: 'Centro', beds: 2, baths: 1, m2: 55, imgTag: 'apartment,interior', lock: 101, tag: 'Venta' },
   { id: 2, title: 'Casa quinta con pileta', price: 'USD 210.000', zone: 'Fisherton', beds: 4, baths: 3, m2: 320, imgTag: 'house,pool', lock: 102, tag: 'Venta' },
   { id: 3, title: 'Monoambiente luminoso', price: '$ 280.000/mes', zone: 'Pichincha', beds: 1, baths: 1, m2: 32, imgTag: 'studio,apartment', lock: 103, tag: 'Alquiler' },
@@ -32,6 +45,8 @@ const PROPERTIES = [
   { id: 5, title: 'Local comercial sobre avenida', price: '$ 450.000/mes', zone: 'Av. Pellegrini', beds: 0, baths: 1, m2: 60, imgTag: 'storefront,commercial', lock: 105, tag: 'Alquiler' },
   { id: 6, title: 'Departamento 3 amb. con balcón', price: 'USD 125.000', zone: 'Puerto Norte', beds: 3, baths: 2, m2: 78, imgTag: 'apartment,balcony', lock: 106, tag: 'Venta' },
 ];
+
+const DEMO_PASSWORD = 'admin123';
 
 const STATS = [
   { value: '+150', label: 'propiedades publicadas' },
@@ -61,6 +76,96 @@ function InmobiliariaDemoContent() {
   const telefonoRaw = searchParams.get('telefono') || '5493410000000';
   const [menuOpen, setMenuOpen] = useState(false);
   const [operacion, setOperacion] = useState<'comprar' | 'alquilar'>('comprar');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginPassword, setLoginPassword] = useState('');
+  const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [formData, setFormData] = useState<Partial<Property>>({
+    title: '',
+    price: '',
+    zone: '',
+    beds: 0,
+    baths: 1,
+    m2: 50,
+    imgTag: 'property',
+    tag: 'Venta',
+  });
+
+  useEffect(() => {
+    const stored = localStorage.getItem('inmobiliaria_props');
+    if (stored) {
+      try {
+        setProperties(JSON.parse(stored));
+      } catch {
+        // fallback to initial
+      }
+    }
+    const auth = localStorage.getItem('inmobiliaria_auth');
+    if (auth === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('inmobiliaria_props', JSON.stringify(properties));
+  }, [properties]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loginPassword === DEMO_PASSWORD) {
+      setIsAuthenticated(true);
+      localStorage.setItem('inmobiliaria_auth', 'true');
+      setShowLoginModal(false);
+      setLoginPassword('');
+    } else {
+      alert('Contraseña incorrecta');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('inmobiliaria_auth');
+    setShowAdminPanel(false);
+  };
+
+  const handleAddProperty = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title || !formData.price || !formData.zone) {
+      alert('Completa los campos obligatorios');
+      return;
+    }
+    if (editingId) {
+      setProperties(properties.map(p => p.id === editingId ? { ...p, ...formData, id: p.id, lock: p.lock } : p));
+      setEditingId(null);
+    } else {
+      const newId = Math.max(...properties.map(p => p.id), 0) + 1;
+      const newLock = Math.max(...properties.map(p => p.lock), 100) + 1;
+      setProperties([...properties, { ...formData, id: newId, lock: newLock } as Property]);
+    }
+    setFormData({
+      title: '',
+      price: '',
+      zone: '',
+      beds: 0,
+      baths: 1,
+      m2: 50,
+      imgTag: 'property',
+      tag: 'Venta',
+    });
+  };
+
+  const handleEditProperty = (property: Property) => {
+    setFormData(property);
+    setEditingId(property.id);
+  };
+
+  const handleDeleteProperty = (id: number) => {
+    if (confirm('¿Seguro que querés eliminar esta propiedad?')) {
+      setProperties(properties.filter(p => p.id !== id));
+    }
+  };
 
   const waLink = `https://wa.me/${telefonoRaw.replace(/\D/g, '')}?text=${encodeURIComponent(
     `Hola! Vi la web de ${nombre} y quería consultar por una propiedad.`
@@ -87,15 +192,44 @@ function InmobiliariaDemoContent() {
             <a href="#nosotros" className="hover:text-emerald-700">Nosotros</a>
             <a href="#contacto" className="hover:text-emerald-700">Contacto</a>
           </nav>
-          <a
-            href={waLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden items-center gap-2 rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 md:inline-flex"
-          >
-            <MessageCircle className="h-4 w-4" />
-            WhatsApp
-          </a>
+          <div className="hidden items-center gap-3 md:flex">
+            {isAuthenticated ? (
+              <>
+                <button
+                  onClick={() => setShowAdminPanel(!showAdminPanel)}
+                  className="flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                >
+                  Administrar
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Salir
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  className="flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  <Lock className="h-4 w-4" />
+                  Admin
+                </button>
+                <a
+                  href={waLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  WhatsApp
+                </a>
+              </>
+            )}
+          </div>
           <button className="md:hidden" onClick={() => setMenuOpen((v) => !v)} aria-label="Menu">
             {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -105,9 +239,25 @@ function InmobiliariaDemoContent() {
             <a href="#propiedades" onClick={() => setMenuOpen(false)}>Propiedades</a>
             <a href="#nosotros" onClick={() => setMenuOpen(false)}>Nosotros</a>
             <a href="#contacto" onClick={() => setMenuOpen(false)}>Contacto</a>
-            <a href={waLink} target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-700">
-              Escribir por WhatsApp
-            </a>
+            {isAuthenticated ? (
+              <>
+                <button onClick={() => { setShowAdminPanel(!showAdminPanel); setMenuOpen(false); }} className="text-left font-semibold text-blue-600">
+                  Administrar
+                </button>
+                <button onClick={handleLogout} className="text-left font-semibold text-slate-600">
+                  Salir
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => { setShowLoginModal(true); setMenuOpen(false); }} className="text-left font-semibold text-slate-600">
+                  Admin
+                </button>
+                <a href={waLink} target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-700">
+                  Escribir por WhatsApp
+                </a>
+              </>
+            )}
           </div>
         )}
       </header>
@@ -190,7 +340,7 @@ function InmobiliariaDemoContent() {
           </div>
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {PROPERTIES.map((p) => (
+          {properties.map((p) => (
             <div key={p.id} className="group overflow-hidden rounded-xl border border-slate-100 shadow-sm transition-shadow hover:shadow-lg">
               <div className="relative h-48 overflow-hidden">
                 <img
@@ -311,6 +461,197 @@ function InmobiliariaDemoContent() {
         </div>
       </section>
 
+      {/* Admin Panel */}
+      {showAdminPanel && isAuthenticated && (
+        <section className="mx-auto max-w-6xl px-6 py-16">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-slate-900">Panel de Administración</h2>
+            <p className="mt-2 text-slate-500">Edita, agrega o elimina propiedades.</p>
+          </div>
+
+          {/* Formulario */}
+          <form onSubmit={handleAddProperty} className="mb-8 rounded-xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+            <h3 className="mb-4 text-lg font-semibold text-slate-900">
+              {editingId ? 'Editar propiedad' : 'Agregar nueva propiedad'}
+            </h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <input
+                type="text"
+                placeholder="Título"
+                value={formData.title || ''}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Precio (ej: USD 100.000 o $ 50.000/mes)"
+                value={formData.price || ''}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Zona"
+                value={formData.zone || ''}
+                onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="number"
+                placeholder="Dormitorios"
+                value={formData.beds || 0}
+                onChange={(e) => setFormData({ ...formData, beds: parseInt(e.target.value) || 0 })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="number"
+                placeholder="Baños"
+                value={formData.baths || 1}
+                onChange={(e) => setFormData({ ...formData, baths: parseInt(e.target.value) || 1 })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="number"
+                placeholder="Metros cuadrados"
+                value={formData.m2 || 50}
+                onChange={(e) => setFormData({ ...formData, m2: parseInt(e.target.value) || 50 })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Tags de imagen (ej: apartment,interior)"
+                value={formData.imgTag || ''}
+                onChange={(e) => setFormData({ ...formData, imgTag: e.target.value })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <select
+                value={formData.tag || 'Venta'}
+                onChange={(e) => setFormData({ ...formData, tag: e.target.value as 'Venta' | 'Alquiler' })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option>Venta</option>
+                <option>Alquiler</option>
+              </select>
+              <button
+                type="submit"
+                className="flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800"
+              >
+                <Plus className="h-4 w-4" />
+                {editingId ? 'Guardar cambios' : 'Agregar propiedad'}
+              </button>
+            </div>
+            {editingId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingId(null);
+                  setFormData({
+                    title: '',
+                    price: '',
+                    zone: '',
+                    beds: 0,
+                    baths: 1,
+                    m2: 50,
+                    imgTag: 'property',
+                    tag: 'Venta',
+                  });
+                }}
+                className="mt-3 text-sm font-semibold text-slate-600 hover:text-slate-800"
+              >
+                Cancelar edición
+              </button>
+            )}
+          </form>
+
+          {/* Tabla de propiedades */}
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-sm">
+              <thead className="border-b border-slate-200 bg-slate-100">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Título</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Precio</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Zona</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Tipo</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {properties.map((p) => (
+                  <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="px-4 py-3">{p.title}</td>
+                    <td className="px-4 py-3">{p.price}</td>
+                    <td className="px-4 py-3">{p.zone}</td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                        {p.tag}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditProperty(p)}
+                          className="flex items-center gap-1 rounded-lg bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-200"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProperty(p.id)}
+                          className="flex items-center gap-1 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* Modal de Login */}
+      {showLoginModal && !isAuthenticated && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
+                <Lock className="h-6 w-6 text-slate-900" />
+              </div>
+            </div>
+            <h2 className="mb-2 text-center text-2xl font-bold text-slate-900">Panel de Administración</h2>
+            <p className="mb-6 text-center text-sm text-slate-600">Ingresa tu contraseña para acceder.</p>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <input
+                type="password"
+                placeholder="Contraseña"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-emerald-700 focus:outline-none"
+                autoFocus
+              />
+              <button
+                type="submit"
+                className="w-full rounded-lg bg-emerald-700 px-4 py-2.5 font-semibold text-white hover:bg-emerald-800"
+              >
+                Iniciar sesión
+              </button>
+            </form>
+            <button
+              onClick={() => setShowLoginModal(false)}
+              className="mt-3 w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              Cancelar
+            </button>
+            <p className="mt-4 text-center text-xs text-slate-500">
+              (Contraseña de demostración: admin123)
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <footer className="border-t border-slate-100 bg-slate-900 py-8 text-center text-sm text-slate-400">
         <p>© {new Date().getFullYear()} {nombre}. Todos los derechos reservados.</p>
@@ -319,7 +660,7 @@ function InmobiliariaDemoContent() {
         </p>
       </footer>
 
-      {/* Boton flotante de WhatsApp, como en la mayoria de webs de inmobiliarias reales */}
+      {/* Boton flotante de WhatsApp */}
       <a
         href={waLink}
         target="_blank"
