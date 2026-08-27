@@ -130,6 +130,16 @@ function InmobiliariaDemoContent() {
     setShowAdminPanel(false);
   };
 
+  const toggleAdminPanel = () => {
+    const next = !showAdminPanel;
+    setShowAdminPanel(next);
+    if (next) {
+      setTimeout(() => {
+        document.getElementById('admin-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 0);
+    }
+  };
+
   const handleAddProperty = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.price || !formData.zone) {
@@ -196,7 +206,7 @@ function InmobiliariaDemoContent() {
             {isAuthenticated ? (
               <>
                 <button
-                  onClick={() => setShowAdminPanel(!showAdminPanel)}
+                  onClick={() => toggleAdminPanel()}
                   className="flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
                 >
                   Administrar
@@ -241,7 +251,7 @@ function InmobiliariaDemoContent() {
             <a href="#contacto" onClick={() => setMenuOpen(false)}>Contacto</a>
             {isAuthenticated ? (
               <>
-                <button onClick={() => { setShowAdminPanel(!showAdminPanel); setMenuOpen(false); }} className="text-left font-semibold text-blue-600">
+                <button onClick={() => { toggleAdminPanel(); setMenuOpen(false); }} className="text-left font-semibold text-blue-600">
                   Administrar
                 </button>
                 <button onClick={handleLogout} className="text-left font-semibold text-slate-600">
@@ -261,6 +271,157 @@ function InmobiliariaDemoContent() {
           </div>
         )}
       </header>
+
+      {/* Admin Panel */}
+      {showAdminPanel && isAuthenticated && (
+        <section id="admin-panel" className="mx-auto max-w-6xl px-6 py-16">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-slate-900">Panel de Administración</h2>
+            <p className="mt-2 text-slate-500">Edita, agrega o elimina propiedades.</p>
+          </div>
+
+          {/* Formulario */}
+          <form onSubmit={handleAddProperty} className="mb-8 rounded-xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+            <h3 className="mb-4 text-lg font-semibold text-slate-900">
+              {editingId ? 'Editar propiedad' : 'Agregar nueva propiedad'}
+            </h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <input
+                type="text"
+                placeholder="Título"
+                value={formData.title || ''}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Precio (ej: USD 100.000 o $ 50.000/mes)"
+                value={formData.price || ''}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Zona"
+                value={formData.zone || ''}
+                onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="number"
+                placeholder="Dormitorios"
+                value={formData.beds || 0}
+                onChange={(e) => setFormData({ ...formData, beds: parseInt(e.target.value) || 0 })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="number"
+                placeholder="Baños"
+                value={formData.baths || 1}
+                onChange={(e) => setFormData({ ...formData, baths: parseInt(e.target.value) || 1 })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="number"
+                placeholder="Metros cuadrados"
+                value={formData.m2 || 50}
+                onChange={(e) => setFormData({ ...formData, m2: parseInt(e.target.value) || 50 })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Tags de imagen (ej: apartment,interior)"
+                value={formData.imgTag || ''}
+                onChange={(e) => setFormData({ ...formData, imgTag: e.target.value })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <select
+                value={formData.tag || 'Venta'}
+                onChange={(e) => setFormData({ ...formData, tag: e.target.value as 'Venta' | 'Alquiler' })}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option>Venta</option>
+                <option>Alquiler</option>
+              </select>
+              <button
+                type="submit"
+                className="flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800"
+              >
+                <Plus className="h-4 w-4" />
+                {editingId ? 'Guardar cambios' : 'Agregar propiedad'}
+              </button>
+            </div>
+            {editingId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingId(null);
+                  setFormData({
+                    title: '',
+                    price: '',
+                    zone: '',
+                    beds: 0,
+                    baths: 1,
+                    m2: 50,
+                    imgTag: 'property',
+                    tag: 'Venta',
+                  });
+                }}
+                className="mt-3 text-sm font-semibold text-slate-600 hover:text-slate-800"
+              >
+                Cancelar edición
+              </button>
+            )}
+          </form>
+
+          {/* Tabla de propiedades */}
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-sm">
+              <thead className="border-b border-slate-200 bg-slate-100">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Título</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Precio</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Zona</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Tipo</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {properties.map((p) => (
+                  <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="px-4 py-3">{p.title}</td>
+                    <td className="px-4 py-3">{p.price}</td>
+                    <td className="px-4 py-3">{p.zone}</td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                        {p.tag}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditProperty(p)}
+                          className="flex items-center gap-1 rounded-lg bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-200"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProperty(p.id)}
+                          className="flex items-center gap-1 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* Hero */}
       <section
@@ -460,157 +621,6 @@ function InmobiliariaDemoContent() {
           </div>
         </div>
       </section>
-
-      {/* Admin Panel */}
-      {showAdminPanel && isAuthenticated && (
-        <section className="mx-auto max-w-6xl px-6 py-16">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-slate-900">Panel de Administración</h2>
-            <p className="mt-2 text-slate-500">Edita, agrega o elimina propiedades.</p>
-          </div>
-
-          {/* Formulario */}
-          <form onSubmit={handleAddProperty} className="mb-8 rounded-xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
-            <h3 className="mb-4 text-lg font-semibold text-slate-900">
-              {editingId ? 'Editar propiedad' : 'Agregar nueva propiedad'}
-            </h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <input
-                type="text"
-                placeholder="Título"
-                value={formData.title || ''}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="text"
-                placeholder="Precio (ej: USD 100.000 o $ 50.000/mes)"
-                value={formData.price || ''}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="text"
-                placeholder="Zona"
-                value={formData.zone || ''}
-                onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="number"
-                placeholder="Dormitorios"
-                value={formData.beds || 0}
-                onChange={(e) => setFormData({ ...formData, beds: parseInt(e.target.value) || 0 })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="number"
-                placeholder="Baños"
-                value={formData.baths || 1}
-                onChange={(e) => setFormData({ ...formData, baths: parseInt(e.target.value) || 1 })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="number"
-                placeholder="Metros cuadrados"
-                value={formData.m2 || 50}
-                onChange={(e) => setFormData({ ...formData, m2: parseInt(e.target.value) || 50 })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="text"
-                placeholder="Tags de imagen (ej: apartment,interior)"
-                value={formData.imgTag || ''}
-                onChange={(e) => setFormData({ ...formData, imgTag: e.target.value })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <select
-                value={formData.tag || 'Venta'}
-                onChange={(e) => setFormData({ ...formData, tag: e.target.value as 'Venta' | 'Alquiler' })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              >
-                <option>Venta</option>
-                <option>Alquiler</option>
-              </select>
-              <button
-                type="submit"
-                className="flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800"
-              >
-                <Plus className="h-4 w-4" />
-                {editingId ? 'Guardar cambios' : 'Agregar propiedad'}
-              </button>
-            </div>
-            {editingId && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingId(null);
-                  setFormData({
-                    title: '',
-                    price: '',
-                    zone: '',
-                    beds: 0,
-                    baths: 1,
-                    m2: 50,
-                    imgTag: 'property',
-                    tag: 'Venta',
-                  });
-                }}
-                className="mt-3 text-sm font-semibold text-slate-600 hover:text-slate-800"
-              >
-                Cancelar edición
-              </button>
-            )}
-          </form>
-
-          {/* Tabla de propiedades */}
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
-            <table className="w-full text-sm">
-              <thead className="border-b border-slate-200 bg-slate-100">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Título</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Precio</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Zona</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Tipo</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {properties.map((p) => (
-                  <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="px-4 py-3">{p.title}</td>
-                    <td className="px-4 py-3">{p.price}</td>
-                    <td className="px-4 py-3">{p.zone}</td>
-                    <td className="px-4 py-3">
-                      <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                        {p.tag}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleEditProperty(p)}
-                          className="flex items-center gap-1 rounded-lg bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-200"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProperty(p.id)}
-                          className="flex items-center gap-1 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
 
       {/* Modal de Login */}
       {showLoginModal && !isAuthenticated && (
