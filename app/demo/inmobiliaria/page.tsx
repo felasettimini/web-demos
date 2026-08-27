@@ -286,70 +286,102 @@ function InmobiliariaDemoContent() {
               {editingId ? 'Editar propiedad' : 'Agregar nueva propiedad'}
             </h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <input
-                type="text"
-                placeholder="Título"
-                value={formData.title || ''}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="text"
-                placeholder="Precio (ej: USD 100.000 o $ 50.000/mes)"
-                value={formData.price || ''}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="text"
-                placeholder="Zona"
-                value={formData.zone || ''}
-                onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="number"
-                placeholder="Dormitorios"
-                value={formData.beds || 0}
-                onChange={(e) => setFormData({ ...formData, beds: parseInt(e.target.value) || 0 })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="number"
-                placeholder="Baños"
-                value={formData.baths || 1}
-                onChange={(e) => setFormData({ ...formData, baths: parseInt(e.target.value) || 1 })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="number"
-                placeholder="Metros cuadrados"
-                value={formData.m2 || 50}
-                onChange={(e) => setFormData({ ...formData, m2: parseInt(e.target.value) || 50 })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="text"
-                placeholder="Tags de imagen (ej: apartment,interior)"
-                value={formData.imgTag || ''}
-                onChange={(e) => setFormData({ ...formData, imgTag: e.target.value })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <select
-                value={formData.tag || 'Venta'}
-                onChange={(e) => setFormData({ ...formData, tag: e.target.value as 'Venta' | 'Alquiler' })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              >
-                <option>Venta</option>
-                <option>Alquiler</option>
-              </select>
-              <button
-                type="submit"
-                className="flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800"
-              >
-                <Plus className="h-4 w-4" />
-                {editingId ? 'Guardar cambios' : 'Agregar propiedad'}
-              </button>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Título de la publicación</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Departamento 2 amb. a estrenar"
+                  value={formData.title || ''}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Precio</label>
+                <input
+                  type="text"
+                  placeholder="Ej: USD 100.000 o $ 50.000/mes"
+                  value={formData.price || ''}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Zona o barrio</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Centro, Fisherton..."
+                  value={formData.zone || ''}
+                  onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Cantidad de dormitorios</label>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Ej: 2"
+                  value={formData.beds ?? 0}
+                  onChange={(e) => setFormData({ ...formData, beds: parseInt(e.target.value) || 0 })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Cantidad de baños</label>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Ej: 1"
+                  value={formData.baths ?? 1}
+                  onChange={(e) => setFormData({ ...formData, baths: parseInt(e.target.value) || 1 })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Superficie (m²)</label>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Ej: 55"
+                  value={formData.m2 ?? 50}
+                  onChange={(e) => setFormData({ ...formData, m2: parseInt(e.target.value) || 50 })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Foto de la propiedad</label>
+                <input
+                  type="text"
+                  placeholder="Ej: apartment,interior"
+                  value={formData.imgTag || ''}
+                  onChange={(e) => setFormData({ ...formData, imgTag: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+                <p className="mt-1 text-xs text-slate-400">
+                  Palabras clave en inglés separadas por coma para buscar una foto de ejemplo (ej: house,pool)
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Tipo de operación</label>
+                <select
+                  value={formData.tag || 'Venta'}
+                  onChange={(e) => setFormData({ ...formData, tag: e.target.value as 'Venta' | 'Alquiler' })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                >
+                  <option>Venta</option>
+                  <option>Alquiler</option>
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800"
+                >
+                  <Plus className="h-4 w-4" />
+                  {editingId ? 'Guardar cambios' : 'Agregar propiedad'}
+                </button>
+              </div>
             </div>
             {editingId && (
               <button
