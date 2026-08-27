@@ -32,7 +32,6 @@ import { INITIAL_PROPERTIES, normalizeProperties, type Property } from './data';
 const DEMO_PASSWORD = 'admin123';
 
 const STATS = [
-  { value: '+150', label: 'propiedades publicadas' },
   { value: '+12', label: 'años en el mercado' },
   { value: '+300', label: 'clientes satisfechos' },
   { value: '4.8', label: 'valoración promedio', icon: true },
@@ -79,6 +78,11 @@ function InmobiliariaDemoContent() {
   });
   const [imageError, setImageError] = useState('');
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [searchZona, setSearchZona] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [logo, setLogo] = useState<string | undefined>(undefined);
+  const [logoError, setLogoError] = useState('');
 
   const readFileAsDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -106,6 +110,23 @@ function InmobiliariaDemoContent() {
     setImageError(errors.join(' '));
     const dataUrls = await Promise.all(validFiles.map(readFileAsDataUrl));
     setFormData((prev) => ({ ...prev, images: [...(prev.images || []), ...dataUrls] }));
+    e.target.value = '';
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setLogoError('El archivo debe ser una imagen');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError('La imagen no puede pesar más de 2MB');
+      return;
+    }
+    setLogoError('');
+    const dataUrl = await readFileAsDataUrl(file);
+    setLogo(dataUrl);
     e.target.value = '';
   };
 
@@ -146,11 +167,27 @@ function InmobiliariaDemoContent() {
     if (auth === 'true') {
       setIsAuthenticated(true);
     }
+    const storedLogo = localStorage.getItem('inmobiliaria_logo');
+    if (storedLogo) {
+      setLogo(storedLogo);
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem('inmobiliaria_props', JSON.stringify(properties));
   }, [properties]);
+
+  useEffect(() => {
+    if (logo) {
+      localStorage.setItem('inmobiliaria_logo', logo);
+    } else {
+      localStorage.removeItem('inmobiliaria_logo');
+    }
+  }, [logo]);
+
+  useEffect(() => {
+    document.title = `${nombre} — Inmobiliaria en ${ciudad}`;
+  }, [nombre, ciudad]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -225,6 +262,18 @@ function InmobiliariaDemoContent() {
 
   const brandQuery = `nombre=${encodeURIComponent(nombre)}&ciudad=${encodeURIComponent(ciudad)}&telefono=${encodeURIComponent(telefonoRaw)}`;
 
+  const filteredProperties = properties.filter((p) => {
+    const matchesOperacion = operacion === 'comprar' ? p.tag === 'Venta' : p.tag === 'Alquiler';
+    const matchesZona = searchZona.trim() === '' || p.zone.toLowerCase().includes(searchZona.trim().toLowerCase());
+    return matchesOperacion && matchesZona;
+  });
+
+  const contactWaLink = `https://wa.me/${telefonoRaw.replace(/\D/g, '')}?text=${encodeURIComponent(
+    contactName || contactMessage
+      ? `Hola${contactName ? `, soy ${contactName}` : ''}. ${contactMessage || 'Quería consultar por una propiedad.'}`
+      : `Hola! Vi la web de ${nombre} y quería consultar por una propiedad.`
+  )}`;
+
   return (
     <div className="min-h-screen bg-white text-slate-800">
       {/* Aviso de que es una demo — se ve solo en pantalla, no molesta el diseño */}
@@ -236,9 +285,13 @@ function InmobiliariaDemoContent() {
       <header className="sticky top-0 z-40 border-b border-slate-100 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-700 text-white">
-              <Home className="h-5 w-5" />
-            </div>
+            {logo ? (
+              <img src={logo} alt={nombre} className="h-9 w-9 rounded-lg object-cover" />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-700 text-white">
+                <Home className="h-5 w-5" />
+              </div>
+            )}
             <span className="text-lg font-bold tracking-tight">{nombre}</span>
           </div>
           <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
@@ -322,6 +375,38 @@ function InmobiliariaDemoContent() {
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-slate-900">Panel de Administración</h2>
             <p className="mt-2 text-slate-500">Edita, agrega o elimina propiedades.</p>
+          </div>
+
+          {/* Logo de la empresa */}
+          <div className="mb-8 rounded-xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+            <h3 className="mb-4 text-lg font-semibold text-slate-900">Logo de la empresa</h3>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              {logo ? (
+                <img src={logo} alt="Logo" className="h-16 w-16 flex-shrink-0 rounded-lg border border-slate-200 object-cover" />
+              ) : (
+                <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white">
+                  <ImageOff className="h-6 w-6 text-slate-300" />
+                </div>
+              )}
+              <div className="flex-1">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  <Upload className="h-4 w-4" />
+                  Subir logo
+                  <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                </label>
+                {logo && (
+                  <button
+                    type="button"
+                    onClick={() => setLogo(undefined)}
+                    className="ml-2 text-sm font-semibold text-red-600 hover:text-red-700"
+                  >
+                    Quitar logo
+                  </button>
+                )}
+                {logoError && <p className="mt-1 text-xs text-red-600">{logoError}</p>}
+                <p className="mt-1 text-xs text-slate-400">Reemplaza el ícono de casa en el encabezado. JPG o PNG, máximo 2MB.</p>
+              </div>
+            </div>
           </div>
 
           {/* Formulario */}
@@ -593,7 +678,7 @@ function InmobiliariaDemoContent() {
             Compra, venta y alquiler con el acompañamiento de un equipo con más de 12 años de experiencia en la zona.
           </p>
 
-          {/* Buscador (visual, no funcional) */}
+          {/* Buscador */}
           <div className="mt-8 w-full max-w-2xl rounded-2xl bg-white p-4 shadow-xl">
             <div className="mb-3 flex gap-2">
               <button
@@ -619,13 +704,18 @@ function InmobiliariaDemoContent() {
                 <input
                   type="text"
                   placeholder={`Zona o barrio de ${ciudad}...`}
+                  value={searchZona}
+                  onChange={(e) => setSearchZona(e.target.value)}
                   className="w-full text-sm text-slate-700 outline-none placeholder:text-slate-400"
                 />
               </div>
-              <button className="flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">
+              <a
+                href="#propiedades"
+                className="flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+              >
                 <Search className="h-4 w-4" />
                 Buscar
-              </button>
+              </a>
             </div>
           </div>
         </div>
@@ -634,6 +724,10 @@ function InmobiliariaDemoContent() {
       {/* Stats */}
       <section className="border-b border-slate-100 bg-slate-50">
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-6 py-10 sm:grid-cols-4">
+          <div className="text-center">
+            <div className="text-3xl font-extrabold text-slate-900">{properties.length}</div>
+            <div className="mt-1 text-sm text-slate-500">propiedades publicadas</div>
+          </div>
           {STATS.map((s) => (
             <div key={s.label} className="text-center">
               <div className="flex items-center justify-center gap-1 text-3xl font-extrabold text-slate-900">
@@ -651,11 +745,20 @@ function InmobiliariaDemoContent() {
         <div className="mb-10 flex items-end justify-between">
           <div>
             <h2 className="text-3xl font-bold text-slate-900">Propiedades destacadas</h2>
-            <p className="mt-2 text-slate-500">Una selección de nuestras publicaciones más recientes.</p>
+            <p className="mt-2 text-slate-500">
+              {searchZona
+                ? `${filteredProperties.length} resultado${filteredProperties.length === 1 ? '' : 's'} para "${searchZona}" en ${operacion === 'comprar' ? 'venta' : 'alquiler'}.`
+                : 'Una selección de nuestras publicaciones más recientes.'}
+            </p>
           </div>
         </div>
+        {filteredProperties.length === 0 && (
+          <div className="rounded-xl border border-dashed border-slate-200 py-16 text-center text-slate-500">
+            No encontramos propiedades en {operacion === 'comprar' ? 'venta' : 'alquiler'} que coincidan con "{searchZona}".
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {properties.map((p) => (
+          {filteredProperties.map((p) => (
             <Link
               key={p.id}
               href={`/demo/inmobiliaria/propiedad?id=${p.id}&${brandQuery}`}
@@ -764,16 +867,26 @@ function InmobiliariaDemoContent() {
           <div className="rounded-xl border border-slate-100 bg-slate-50 p-6 shadow-sm">
             <div className="mb-3">
               <label className="mb-1 block text-xs font-medium text-slate-500">Nombre</label>
-              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-400">Tu nombre</div>
+              <input
+                type="text"
+                placeholder="Tu nombre"
+                value={contactName}
+                onChange={(e) => setContactName(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-emerald-700"
+              />
             </div>
             <div className="mb-3">
               <label className="mb-1 block text-xs font-medium text-slate-500">Mensaje</label>
-              <div className="h-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-400">
-                Contanos qué estás buscando...
-              </div>
+              <textarea
+                placeholder="Contanos qué estás buscando..."
+                rows={3}
+                value={contactMessage}
+                onChange={(e) => setContactMessage(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-emerald-700"
+              />
             </div>
             <a
-              href={waLink}
+              href={contactWaLink}
               target="_blank"
               rel="noopener noreferrer"
               className="block w-full rounded-lg bg-emerald-700 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-emerald-800"
