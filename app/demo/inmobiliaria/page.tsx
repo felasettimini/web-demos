@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   Home,
@@ -25,29 +26,7 @@ import {
   Upload,
   ImageOff,
 } from 'lucide-react';
-
-interface Property {
-  id: number;
-  title: string;
-  price: string;
-  zone: string;
-  beds: number;
-  baths: number;
-  m2: number;
-  imgTag: string;
-  lock: number;
-  tag: 'Venta' | 'Alquiler';
-  customImage?: string;
-}
-
-const INITIAL_PROPERTIES: Property[] = [
-  { id: 1, title: 'Departamento 2 amb. a estrenar', price: 'USD 89.000', zone: 'Centro', beds: 2, baths: 1, m2: 55, imgTag: 'apartment,interior', lock: 101, tag: 'Venta' },
-  { id: 2, title: 'Casa quinta con pileta', price: 'USD 210.000', zone: 'Fisherton', beds: 4, baths: 3, m2: 320, imgTag: 'house,pool', lock: 102, tag: 'Venta' },
-  { id: 3, title: 'Monoambiente luminoso', price: '$ 280.000/mes', zone: 'Pichincha', beds: 1, baths: 1, m2: 32, imgTag: 'studio,apartment', lock: 103, tag: 'Alquiler' },
-  { id: 4, title: 'PH con patio propio', price: 'USD 76.000', zone: 'Echesortu', beds: 3, baths: 2, m2: 95, imgTag: 'house,patio', lock: 104, tag: 'Venta' },
-  { id: 5, title: 'Local comercial sobre avenida', price: '$ 450.000/mes', zone: 'Av. Pellegrini', beds: 0, baths: 1, m2: 60, imgTag: 'storefront,commercial', lock: 105, tag: 'Alquiler' },
-  { id: 6, title: 'Departamento 3 amb. con balcón', price: 'USD 125.000', zone: 'Puerto Norte', beds: 3, baths: 2, m2: 78, imgTag: 'apartment,balcony', lock: 106, tag: 'Venta' },
-];
+import { INITIAL_PROPERTIES, type Property } from './data';
 
 const DEMO_PASSWORD = 'admin123';
 
@@ -95,6 +74,7 @@ function InmobiliariaDemoContent() {
     imgTag: 'property',
     tag: 'Venta',
     customImage: undefined,
+    description: '',
   });
   const [imageError, setImageError] = useState('');
 
@@ -188,6 +168,7 @@ function InmobiliariaDemoContent() {
       imgTag: 'property',
       tag: 'Venta',
       customImage: undefined,
+      description: '',
     });
   };
 
@@ -205,6 +186,8 @@ function InmobiliariaDemoContent() {
   const waLink = `https://wa.me/${telefonoRaw.replace(/\D/g, '')}?text=${encodeURIComponent(
     `Hola! Vi la web de ${nombre} y quería consultar por una propiedad.`
   )}`;
+
+  const brandQuery = `nombre=${encodeURIComponent(nombre)}&ciudad=${encodeURIComponent(ciudad)}&telefono=${encodeURIComponent(telefonoRaw)}`;
 
   return (
     <div className="min-h-screen bg-white text-slate-800">
@@ -423,6 +406,20 @@ function InmobiliariaDemoContent() {
               </div>
             </div>
 
+            <div className="mt-4">
+              <label className="mb-1 block text-xs font-medium text-slate-600">Descripción de la propiedad</label>
+              <textarea
+                placeholder="Contale al cliente los detalles y puntos fuertes de la propiedad..."
+                value={formData.description || ''}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={3}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <p className="mt-1 text-xs text-slate-400">
+                Se muestra en la página de detalle de la propiedad.
+              </p>
+            </div>
+
             <button
               type="submit"
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800 sm:w-auto"
@@ -445,6 +442,7 @@ function InmobiliariaDemoContent() {
                     imgTag: 'property',
                     tag: 'Venta',
                     customImage: undefined,
+                    description: '',
                   });
                 }}
                 className="mt-3 text-sm font-semibold text-slate-600 hover:text-slate-800"
@@ -582,7 +580,11 @@ function InmobiliariaDemoContent() {
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {properties.map((p) => (
-            <div key={p.id} className="group overflow-hidden rounded-xl border border-slate-100 shadow-sm transition-shadow hover:shadow-lg">
+            <Link
+              key={p.id}
+              href={`/demo/inmobiliaria/propiedad?id=${p.id}&${brandQuery}`}
+              className="group overflow-hidden rounded-xl border border-slate-100 shadow-sm transition-shadow hover:shadow-lg"
+            >
               <div className="relative h-48 overflow-hidden">
                 <img
                   src={p.customImage || `https://loremflickr.com/600/400/${p.imgTag}?lock=${p.lock}`}
@@ -613,8 +615,12 @@ function InmobiliariaDemoContent() {
                     <Ruler className="h-3.5 w-3.5" /> {p.m2} m²
                   </span>
                 </div>
+                <div className="mt-3 flex items-center gap-1 text-sm font-semibold text-emerald-700">
+                  Ver detalle
+                  <ChevronRight className="h-4 w-4" />
+                </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
