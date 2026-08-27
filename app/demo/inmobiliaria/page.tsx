@@ -421,23 +421,6 @@ function InmobiliariaDemoContent() {
                   <p className="mt-1 text-xs text-slate-400">JPG o PNG, máximo 2MB.</p>
                 </div>
               </div>
-              {!formData.customImage && (
-                <div className="mt-3">
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    O usá una foto de stock de ejemplo (opcional, se usa solo si no subís una foto)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ej: apartment,interior"
-                    value={formData.imgTag || ''}
-                    onChange={(e) => setFormData({ ...formData, imgTag: e.target.value })}
-                    className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                  />
-                  <p className="mt-1 text-xs text-slate-400">
-                    Palabras clave en inglés separadas por coma (ej: house,pool)
-                  </p>
-                </div>
-              )}
             </div>
 
             <button
