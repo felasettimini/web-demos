@@ -12,7 +12,7 @@ import {
   MessageCircle,
   ChevronLeft,
 } from 'lucide-react';
-import { INITIAL_PROPERTIES, type Property } from '../data';
+import { INITIAL_PROPERTIES, normalizeProperties, type Property } from '../data';
 
 export default function PropiedadDetallePage() {
   return (
@@ -31,12 +31,13 @@ function PropiedadDetalleContent() {
 
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES);
   const [loaded, setLoaded] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(0);
 
   useEffect(() => {
     const stored = localStorage.getItem('inmobiliaria_props');
     if (stored) {
       try {
-        setProperties(JSON.parse(stored));
+        setProperties(normalizeProperties(JSON.parse(stored)));
       } catch {
         // fallback to initial
       }
@@ -45,6 +46,11 @@ function PropiedadDetalleContent() {
   }, []);
 
   const property = properties.find((p) => p.id === id);
+  const images = property?.images && property.images.length > 0
+    ? property.images
+    : property
+      ? [`https://loremflickr.com/1200/700/${property.imgTag}?lock=${property.lock}`]
+      : [];
   const backHref = `/demo/inmobiliaria?nombre=${encodeURIComponent(nombre)}&ciudad=${encodeURIComponent(ciudad)}&telefono=${encodeURIComponent(telefonoRaw)}`;
   const waLink = property
     ? `https://wa.me/${telefonoRaw.replace(/\D/g, '')}?text=${encodeURIComponent(
@@ -90,11 +96,27 @@ function PropiedadDetalleContent() {
         <section className="mx-auto max-w-5xl px-6 py-10">
           <div className="overflow-hidden rounded-2xl">
             <img
-              src={property.customImage || `https://loremflickr.com/1200/700/${property.imgTag}?lock=${property.lock}`}
+              src={images[selectedImage] || images[0]}
               alt={property.title}
               className="h-[320px] w-full object-cover sm:h-[420px]"
             />
           </div>
+          {images.length > 1 && (
+            <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
+              {images.map((img, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setSelectedImage(idx)}
+                  className={`h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
+                    idx === selectedImage ? 'border-emerald-700' : 'border-transparent'
+                  }`}
+                >
+                  <img src={img} alt={`${property.title} foto ${idx + 1}`} className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="mt-6 grid grid-cols-1 gap-10 md:grid-cols-3">
             <div className="md:col-span-2">

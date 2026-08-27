@@ -9,8 +9,18 @@ export interface Property {
   imgTag: string;
   lock: number;
   tag: 'Venta' | 'Alquiler';
-  customImage?: string;
+  images?: string[];
   description?: string;
+}
+
+// Migra propiedades guardadas con el esquema viejo (una sola `customImage`) al nuevo array `images`.
+export function normalizeProperties(raw: unknown[]): Property[] {
+  return raw.map((item) => {
+    const p = item as Property & { customImage?: string };
+    if (p.images) return p as Property;
+    const { customImage, ...rest } = p;
+    return { ...rest, images: customImage ? [customImage] : [] };
+  });
 }
 
 export const INITIAL_PROPERTIES: Property[] = [

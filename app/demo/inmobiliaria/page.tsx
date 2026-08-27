@@ -15,6 +15,7 @@ import {
   Star,
   Building2,
   ChevronRight,
+  ChevronLeft,
   Menu,
   X,
   MessageCircle,
@@ -26,7 +27,7 @@ import {
   Upload,
   ImageOff,
 } from 'lucide-react';
-import { INITIAL_PROPERTIES, type Property } from './data';
+import { INITIAL_PROPERTIES, normalizeProperties, type Property } from './data';
 
 const DEMO_PASSWORD = 'admin123';
 
@@ -73,35 +74,59 @@ function InmobiliariaDemoContent() {
     m2: 50,
     imgTag: 'property',
     tag: 'Venta',
-    customImage: undefined,
+    images: [],
     description: '',
   });
   const [imageError, setImageError] = useState('');
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setImageError('El archivo debe ser una imagen');
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setImageError('La imagen no puede pesar más de 2MB');
-      return;
-    }
-    setImageError('');
-    const reader = new FileReader();
-    reader.onload = () => {
-      setFormData((prev) => ({ ...prev, customImage: reader.result as string }));
-    };
-    reader.readAsDataURL(file);
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const errors: string[] = [];
+    const validFiles = files.filter((file) => {
+      if (!file.type.startsWith('image/')) {
+        errors.push(`${file.name}: debe ser una imagen`);
+        return false;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        errors.push(`${file.name}: no puede pesar más de 2MB`);
+        return false;
+      }
+      return true;
+    });
+    setImageError(errors.join(' '));
+    const dataUrls = await Promise.all(validFiles.map(readFileAsDataUrl));
+    setFormData((prev) => ({ ...prev, images: [...(prev.images || []), ...dataUrls] }));
+    e.target.value = '';
+  };
+
+  const moveImage = (index: number, direction: -1 | 1) => {
+    setFormData((prev) => {
+      const imgs = [...(prev.images || [])];
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= imgs.length) return prev;
+      [imgs[index], imgs[newIndex]] = [imgs[newIndex], imgs[index]];
+      return { ...prev, images: imgs };
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setFormData((prev) => ({ ...prev, images: (prev.images || []).filter((_, i) => i !== index) }));
   };
 
   useEffect(() => {
     const stored = localStorage.getItem('inmobiliaria_props');
     if (stored) {
       try {
-        setProperties(JSON.parse(stored));
+        setProperties(normalizeProperties(JSON.parse(stored)));
       } catch {
         // fallback to initial
       }
@@ -167,7 +192,7 @@ function InmobiliariaDemoContent() {
       m2: 50,
       imgTag: 'property',
       tag: 'Venta',
-      customImage: undefined,
+      images: [],
       description: '',
     });
   };
@@ -370,40 +395,66 @@ function InmobiliariaDemoContent() {
               </div>
             </div>
 
-            {/* Foto de la propiedad */}
+            {/* Fotos de la propiedad */}
             <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
-              <label className="mb-1 block text-xs font-medium text-slate-600">Foto de la propiedad</label>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                {formData.customImage ? (
-                  <img
-                    src={formData.customImage}
-                    alt="Vista previa"
-                    className="h-20 w-28 flex-shrink-0 rounded-lg border border-slate-200 object-cover"
-                  />
-                ) : (
-                  <div className="flex h-20 w-28 flex-shrink-0 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50">
-                    <ImageOff className="h-6 w-6 text-slate-300" />
-                  </div>
-                )}
-                <div className="flex-1">
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                    <Upload className="h-4 w-4" />
-                    Subir foto desde tu dispositivo
-                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                  </label>
-                  {formData.customImage && (
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, customImage: undefined })}
-                      className="ml-2 text-sm font-semibold text-red-600 hover:text-red-700"
-                    >
-                      Quitar foto
-                    </button>
-                  )}
-                  {imageError && <p className="mt-1 text-xs text-red-600">{imageError}</p>}
-                  <p className="mt-1 text-xs text-slate-400">JPG o PNG, máximo 2MB.</p>
+              <label className="mb-1 block text-xs font-medium text-slate-600">Fotos de la propiedad</label>
+
+              {(formData.images || []).length > 0 ? (
+                <div className="mb-3 flex flex-wrap gap-3">
+                  {(formData.images || []).map((img, idx) => (
+                    <div key={idx} className="relative h-20 w-28 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200">
+                      <img src={img} alt={`Foto ${idx + 1}`} className="h-full w-full object-cover" />
+                      {idx === 0 && (
+                        <span className="absolute left-1 top-1 rounded bg-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                          Principal
+                        </span>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/60 px-1 py-0.5">
+                        <button
+                          type="button"
+                          onClick={() => moveImage(idx, -1)}
+                          disabled={idx === 0}
+                          className="text-white disabled:opacity-30"
+                          aria-label="Mover a la izquierda"
+                        >
+                          <ChevronLeft className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeImage(idx)}
+                          className="text-white hover:text-red-400"
+                          aria-label="Quitar foto"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveImage(idx, 1)}
+                          disabled={idx === (formData.images || []).length - 1}
+                          className="text-white disabled:opacity-30"
+                          aria-label="Mover a la derecha"
+                        >
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <div className="mb-3 flex h-20 w-28 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50">
+                  <ImageOff className="h-6 w-6 text-slate-300" />
+                </div>
+              )}
+
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <Upload className="h-4 w-4" />
+                Subir fotos desde tu dispositivo
+                <input type="file" accept="image/*" multiple onChange={handleImagesUpload} className="hidden" />
+              </label>
+              {imageError && <p className="mt-1 text-xs text-red-600">{imageError}</p>}
+              <p className="mt-1 text-xs text-slate-400">
+                JPG o PNG, máximo 2MB c/u. Podés subir varias a la vez; la primera es la foto principal. Usá las flechas para reordenar.
+              </p>
             </div>
 
             <div className="mt-4">
@@ -441,7 +492,7 @@ function InmobiliariaDemoContent() {
                     m2: 50,
                     imgTag: 'property',
                     tag: 'Venta',
-                    customImage: undefined,
+                    images: [],
                     description: '',
                   });
                 }}
@@ -587,7 +638,7 @@ function InmobiliariaDemoContent() {
             >
               <div className="relative h-48 overflow-hidden">
                 <img
-                  src={p.customImage || `https://loremflickr.com/600/400/${p.imgTag}?lock=${p.lock}`}
+                  src={p.images?.[0] || `https://loremflickr.com/600/400/${p.imgTag}?lock=${p.lock}`}
                   alt={p.title}
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
